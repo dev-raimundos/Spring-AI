@@ -33,6 +33,9 @@ public class RagController {
             Map<String, Object> meta = Optional.ofNullable(item.metadata()).orElseGet(HashMap::new);
             String id = item.id();
 
+            // Construtores válidos em 1.0.1:
+            // new Document(String text, Map<String,Object> metadata)
+            // new Document(String id, String text, Map<String,Object> metadata)
             org.springframework.ai.document.Document d = (id == null || id.isBlank())
                     ? new org.springframework.ai.document.Document(item.text(), meta)
                     : new org.springframework.ai.document.Document(id, item.text(), meta);
@@ -40,7 +43,7 @@ public class RagController {
             docs.add(d);
         }
 
-        vectorStore.add(docs); // => gera embeddings e salva
+        vectorStore.add(docs); // gera embeddings e salva
 
         return Map.of(
                 "ingested", docs.size(),
@@ -70,7 +73,7 @@ public class RagController {
         for (int i = 0; i < results.size(); i++) {
             var d = results.get(i);
             context.append("\n[DOC ").append(i + 1).append("]\n")
-                    .append(d.getContent()).append("\n");
+                    .append(d.getText()).append("\n");
             if (d.getMetadata() != null && !d.getMetadata().isEmpty()) {
                 context.append("(metadata: ").append(d.getMetadata()).append(")\n");
             }
@@ -99,7 +102,7 @@ public class RagController {
         return new RagAnswer(
                 answer,
                 results.stream()
-                        .map(doc -> new RagAnswer.Source(doc.getId(), doc.getContent(), doc.getMetadata()))
+                        .map(doc -> new RagAnswer.Source(doc.getId(), doc.getText(), doc.getMetadata()))
                         .toList()
         );
     }

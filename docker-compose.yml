@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: pg17-vector
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Canduba09@
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spring-ai-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=spring,public
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Canduba09@
+      SPRING_AI_VECTORSTORE_PGVECTOR_INITIALIZE_SCHEMA: "true"
+      SPRING_AI_VECTORSTORE_PGVECTOR_TABLE_NAME: vector_store
+      SPRING_AI_VECTORSTORE_PGVECTOR_DIMENSIONS: "768"
+      SPRING_AI_VECTORSTORE_PGVECTOR_DISTANCE_TYPE: COSINE_DISTANCE
+      SPRING_AI_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      SPRING_AI_OLLAMA_CHAT_OPTIONS_MODEL: gemma3:4b
+      SPRING_AI_OLLAMA_EMBEDDING_OPTIONS_MODEL: nomic-embed-text
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

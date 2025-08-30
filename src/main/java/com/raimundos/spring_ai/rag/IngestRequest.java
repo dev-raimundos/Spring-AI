@@ -1,4 +1,5 @@
 package com.raimundos.spring_ai.rag;
 
-public class IngestRequest {
-}
+import java.util.List;
+
+public record IngestRequest(List<IngestItem> items) {}

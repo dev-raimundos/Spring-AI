@@ -3,7 +3,6 @@ package com.raimundos.spring_ai.rag;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.document.Document;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,16 +25,18 @@ public class RagController {
      * - Gera embedding com o modelo configurado em spring.ai.ollama.embedding.options.model
      * - Persiste no Postgres (pgvector)
      */
-    @PostMapping(value = "/ingest", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/ingest", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> ingest(@RequestBody IngestRequest request) {
-        List<Document> docs = new ArrayList<>();
+        java.util.List<org.springframework.ai.document.Document> docs = new ArrayList<>();
+
         for (IngestItem item : request.items()) {
             Map<String, Object> meta = Optional.ofNullable(item.metadata()).orElseGet(HashMap::new);
-            // defina um id fixo se quiser regravar, senão deixe null e o store cria
             String id = item.id();
-            Document d = (id == null || id.isBlank())
-                    ? new Document(item.text(), meta)
-                    : new Document(id, item.text(), meta);
+
+            org.springframework.ai.document.Document d = (id == null || id.isBlank())
+                    ? new org.springframework.ai.document.Document(item.text(), meta)
+                    : new org.springframework.ai.document.Document(id, item.text(), meta);
+
             docs.add(d);
         }
 
@@ -43,7 +44,7 @@ public class RagController {
 
         return Map.of(
                 "ingested", docs.size(),
-                "ids", docs.stream().map(Document::getId).toList()
+                "ids", docs.stream().map(org.springframework.ai.document.Document::getId).toList()
         );
     }
 
@@ -53,13 +54,16 @@ public class RagController {
      * - Monta um prompt com os trechos recuperados como contexto
      * - Chama o modelo de chat configurado (spring.ai.ollama.chat.options.model)
      */
-    @PostMapping(value = "/query", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/query", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public RagAnswer query(@RequestBody QueryRequest request) {
         int topK = (request.topK() != null && request.topK() > 0) ? request.topK() : 4;
 
-        var results = vectorStore.similaritySearch(
-                SearchRequest.query(request.question()).withTopK(topK)
-        );
+        SearchRequest sr = SearchRequest.builder()
+                .query(request.question())
+                .topK(topK)
+                .build();
+
+        java.util.List<org.springframework.ai.document.Document> results = vectorStore.similaritySearch(sr);
 
         // Constrói um contexto curto com fontes
         StringBuilder context = new StringBuilder();
@@ -92,8 +96,11 @@ public class RagController {
                 .call()
                 .content();
 
-        return new RagAnswer(answer, results.stream().map(doc ->
-                new RagAnswer.Source(doc.getId(), doc.getContent(), doc.getMetadata())
-        ).toList());
+        return new RagAnswer(
+                answer,
+                results.stream()
+                        .map(doc -> new RagAnswer.Source(doc.getId(), doc.getContent(), doc.getMetadata()))
+                        .toList()
+        );
     }
 }

@@ -17,6 +17,19 @@ services:
       timeout: 3s
       retries: 10
 
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ${USERPROFILE}/.ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   app:
     build:
       context: .
@@ -25,15 +38,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      ollama:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=spring,public
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres?currentSchema=public,spring
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: Canduba09@
       SPRING_AI_VECTORSTORE_PGVECTOR_INITIALIZE_SCHEMA: "true"
       SPRING_AI_VECTORSTORE_PGVECTOR_TABLE_NAME: vector_store
       SPRING_AI_VECTORSTORE_PGVECTOR_DIMENSIONS: "768"
-      SPRING_AI_VECTORSTORE_PGVECTOR_DISTANCE_TYPE: COSINE_DISTANCE
-      SPRING_AI_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      SPRING_AI_VECTORSTORE_PGVECTOR_DISTANCE_TYPE: EUCLIDEAN_DISTANCE
+      SPRING_AI_VECTORSTORE_PGVECTOR_INDEX_TYPE: IVFFLAT
+      SPRING_AI_OLLAMA_BASE_URL: http://ollama:11434
       SPRING_AI_OLLAMA_CHAT_OPTIONS_MODEL: gemma3:4b
       SPRING_AI_OLLAMA_EMBEDDING_OPTIONS_MODEL: nomic-embed-text
     ports:

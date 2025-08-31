@@ -1,4 +1,8 @@
 package com.raimundos.spring_ai.rag;
 
-public class QueryAdvancedRequest {
-}
+public record QueryAdvancedRequest(
+        String question,
+        Integer topK,
+        Double similarityThreshold,
+        String filterExpression
+) {}

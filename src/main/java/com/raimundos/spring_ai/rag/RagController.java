@@ -19,7 +19,6 @@ public class RagController {
     private static final int DEFAULT_TOPK = 6;
     private static final double DEFAULT_SIM_THRESHOLD = 0.0; // ajuste no advanced
     private static final int MAX_CONTEXT_CHARS = 10_000;     // segurança do prompt
-
     private final VectorStore vectorStore;
     private final ChatClient chatClient;
 
